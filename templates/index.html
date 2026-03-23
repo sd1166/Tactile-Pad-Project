@@ -47,6 +47,42 @@
                 <button class="btn btn-ghost" onclick="clearBoard()">Clear</button>
             </section>
 
+            <!-- ADDED: image upload section starts -->
+            <section class="control-group">
+                <label for="imageInput" class="input-label">Image Input</label>
+                <div class="input-row">
+                    <input
+                        id="imageInput"
+                        type="file"
+                        accept="image/*"
+                    />
+                </div>
+                <p class="helper-text">
+                    Upload an image to convert it into a tactile preview or braille-style mapping.
+                </p>
+            </section>
+
+            <section class="action-group">
+                <button class="btn btn-primary" onclick="uploadImage()">Convert Image</button>
+                <button class="btn btn-ghost" onclick="clearImageSelection()">Clear Image</button>
+            </section>
+
+            <section class="preview-section">
+                <div class="card">
+                    <div class="card-header preview-header">
+                        <div class="preview-title-group">
+                            <h2>Image Preview</h2>
+                            <span class="card-meta" id="imagePreviewStatus">No image selected</span>
+                        </div>
+                    </div>
+
+                    <div id="imagePreview" class="preview-empty">
+                        No image uploaded yet.
+                    </div>
+                </div>
+            </section>
+            <!-- ADDED: image upload section ends -->
+
             <section class="preview-section">
                 <div class="card">
                     <div class="card-header preview-header">
@@ -91,6 +127,11 @@
         const textInputEl = document.getElementById("textInput");
         const detailModeBtn = document.getElementById("detailModeBtn");
         const lineModeBtn = document.getElementById("lineModeBtn");
+
+        /* ADDED: image-related element references */
+        const imageInputEl = document.getElementById("imageInput");
+        const imagePreviewEl = document.getElementById("imagePreview");
+        const imagePreviewStatusEl = document.getElementById("imagePreviewStatus");
 
         let previewMode = "detail";
         let latestPatterns = [];
@@ -277,6 +318,101 @@
                 console.error(error);
                 setStatus("Failed to clear the board.", "error");
             }
+        }
+
+        /* ADDED: show local selected image before upload */
+        imageInputEl.addEventListener("change", function () {
+            const file = imageInputEl.files && imageInputEl.files[0];
+
+            if (!file) {
+                imagePreviewEl.className = "preview-empty";
+                imagePreviewEl.innerHTML = "No image uploaded yet.";
+                imagePreviewStatusEl.textContent = "No image selected";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                imagePreviewEl.className = "preview-content";
+                imagePreviewEl.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <img
+                            src="${event.target.result}"
+                            alt="Selected image preview"
+                            style="max-width:100%; max-height:320px; object-fit:contain; border-radius:12px;"
+                        />
+                        <div>${escapeHtml(file.name)}</div>
+                    </div>
+                `;
+                imagePreviewStatusEl.textContent = "Image selected";
+            };
+            reader.readAsDataURL(file);
+        });
+
+        /* ADDED: send image to backend */
+        async function uploadImage() {
+            const file = imageInputEl.files && imageInputEl.files[0];
+
+            if (!file) {
+                setStatus("Please select an image before converting.", "warning");
+                return;
+            }
+
+            try {
+                setStatus("Uploading image for conversion...", "loading");
+
+                const formData = new FormData();
+                formData.append("image", file);
+
+                const response = await fetch("/image-display", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Image upload failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                /* If backend returns braille patterns, render them in the existing preview area */
+                const patterns = Array.isArray(data.patterns) ? data.patterns : [];
+                if (patterns.length) {
+                    renderPreview(patterns);
+                }
+
+                /* If backend returns processed image url, show it in image preview area */
+                if (data.image_url) {
+                    imagePreviewEl.className = "preview-content";
+                    imagePreviewEl.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <img
+                                src="${escapeHtml(data.image_url)}"
+                                alt="Processed image preview"
+                                style="max-width:100%; max-height:320px; object-fit:contain; border-radius:12px;"
+                            />
+                            <div>Processed image</div>
+                        </div>
+                    `;
+                    imagePreviewStatusEl.textContent = "Image converted";
+                } else {
+                    imagePreviewStatusEl.textContent = "Image converted";
+                }
+
+                setStatus("Image converted successfully.", "success");
+            } catch (error) {
+                console.error(error);
+                setStatus("Failed to convert the image.", "error");
+            }
+        }
+
+        /* ADDED: clear only image selection area */
+        function clearImageSelection() {
+            imageInputEl.value = "";
+            imagePreviewEl.className = "preview-empty";
+            imagePreviewEl.innerHTML = "No image uploaded yet.";
+            imagePreviewStatusEl.textContent = "No image selected";
+            setStatus("Image selection cleared.", "idle");
         }
     </script>
 </body>
