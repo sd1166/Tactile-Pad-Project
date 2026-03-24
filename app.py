@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
 from braille import translate_text
 from fake_board import send_to_board, reset_board, clear_board
 from image_mapping.image_pipeline import process_image_for_flask
 import os
 from werkzeug.utils import secure_filename
+import uuid
 
 app = Flask(__name__)
 
@@ -34,7 +35,14 @@ def display():
         "patterns": patterns
     })
 
+# Added: route for serving uploaded images back to frontend
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+# Added: support both old and new frontend route names
 @app.route("/upload_image", methods=["POST"])
+@app.route("/image-display", methods=["POST"])
 def upload_image():
     # Check if the request contains an image file field named "image"
     if "image" not in request.files:
@@ -59,26 +67,29 @@ def upload_image():
             "message": "Unsupported file type."
         }), 400
 
-    # Save the uploaded file safely
-    filename = secure_filename(file.filename)
-    save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    # Save the uploaded file safely with a unique filename
+    original_filename = secure_filename(file.filename)
+    unique_filename = f"{uuid.uuid4().hex}_{original_filename}"
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
     file.save(save_path)
 
     try:
-        # Call your image conversion function
-        # This returns a dictionary with:
-        # rows, flat_values, pico_data, target_width, target_height, threshold
+        # Call image conversion function
         result = process_image_for_flask(save_path)
+
+        # Build an accessible URL for frontend preview
+        image_url = url_for("uploaded_file", filename=unique_filename)
 
         return jsonify({
             "status": "ok",
-            "filename": filename,
-            "rows": result["rows"],
-            "flat_values": result["flat_values"],
-            "pico_data": result["pico_data"],
-            "target_width": result["target_width"],
-            "target_height": result["target_height"],
-            "threshold": result["threshold"]
+            "filename": unique_filename,
+            "image_url": image_url,
+            "rows": result.get("rows", []),
+            "flat_values": result.get("flat_values", []),
+            "pico_data": result.get("pico_data", ""),
+            "target_width": result.get("target_width"),
+            "target_height": result.get("target_height"),
+            "threshold": result.get("threshold")
         })
 
     except Exception as e:

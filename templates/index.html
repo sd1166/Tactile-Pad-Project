@@ -47,7 +47,7 @@
                 <button class="btn btn-ghost" onclick="clearBoard()">Clear</button>
             </section>
 
-            <!-- ADDED: image upload section starts -->
+            <!-- image upload section -->
             <section class="control-group">
                 <label for="imageInput" class="input-label">Image Input</label>
                 <div class="input-row">
@@ -81,7 +81,6 @@
                     </div>
                 </div>
             </section>
-            <!-- ADDED: image upload section ends -->
 
             <section class="preview-section">
                 <div class="card">
@@ -128,7 +127,6 @@
         const detailModeBtn = document.getElementById("detailModeBtn");
         const lineModeBtn = document.getElementById("lineModeBtn");
 
-        /* ADDED: image-related element references */
         const imageInputEl = document.getElementById("imageInput");
         const imagePreviewEl = document.getElementById("imagePreview");
         const imagePreviewStatusEl = document.getElementById("imagePreviewStatus");
@@ -155,10 +153,8 @@
 
         function setPreviewMode(mode) {
             previewMode = mode;
-
             detailModeBtn.classList.toggle("active", mode === "detail");
             lineModeBtn.classList.toggle("active", mode === "line");
-
             renderPreview(latestPatterns);
         }
 
@@ -320,7 +316,60 @@
             }
         }
 
-        /* ADDED: show local selected image before upload */
+        function renderImageMapping(rows = [], meta = {}) {
+            if (!Array.isArray(rows) || !rows.length) {
+                previewEl.className = "preview-empty";
+                previewEl.innerHTML = "No image mapping generated yet.";
+                previewCountEl.textContent = "0 items";
+                return;
+            }
+
+            const width = meta.target_width ?? "N/A";
+            const height = meta.target_height ?? "N/A";
+            const threshold = meta.threshold ?? "N/A";
+
+            const htmlRows = rows.map(row => {
+                const safeRow = Array.isArray(row) ? row : [];
+                return `
+                    <div style="display:flex; gap:6px; flex-wrap:nowrap;">
+                        ${safeRow.map(value => `
+                            <span
+                                style="
+                                    width:22px;
+                                    height:22px;
+                                    display:inline-flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    border-radius:6px;
+                                    font-size:12px;
+                                    font-weight:600;
+                                    background:${value === 1 ? "#111" : "#e9ecef"};
+                                    color:${value === 1 ? "#fff" : "#333"};
+                                "
+                            >${escapeHtml(value)}</span>
+                        `).join("")}
+                    </div>
+                `;
+            }).join("");
+
+            previewEl.className = "preview-content";
+            previewEl.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:14px;">
+                        <span><strong>Width:</strong> ${escapeHtml(width)}</span>
+                        <span><strong>Height:</strong> ${escapeHtml(height)}</span>
+                        <span><strong>Threshold:</strong> ${escapeHtml(threshold)}</span>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        ${htmlRows}
+                    </div>
+                </div>
+            `;
+
+            previewCountEl.textContent = `${rows.length} row${rows.length === 1 ? "" : "s"}`;
+        }
+
         imageInputEl.addEventListener("change", function () {
             const file = imageInputEl.files && imageInputEl.files[0];
 
@@ -349,7 +398,6 @@
             reader.readAsDataURL(file);
         });
 
-        /* ADDED: send image to backend */
         async function uploadImage() {
             const file = imageInputEl.files && imageInputEl.files[0];
 
@@ -364,41 +412,40 @@
                 const formData = new FormData();
                 formData.append("image", file);
 
-                const response = await fetch("/image-display", {
+                const response = await fetch("/upload_image", {
                     method: "POST",
                     body: formData
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Image upload failed with status ${response.status}`);
-                }
-
                 const data = await response.json();
 
-                /* If backend returns braille patterns, render them in the existing preview area */
-                const patterns = Array.isArray(data.patterns) ? data.patterns : [];
-                if (patterns.length) {
-                    renderPreview(patterns);
+                if (!response.ok || data.status !== "ok") {
+                    throw new Error(data.message || `Image upload failed with status ${response.status}`);
                 }
 
-                /* If backend returns processed image url, show it in image preview area */
+                const rows = Array.isArray(data.rows) ? data.rows : [];
+
+                renderImageMapping(rows, {
+                    target_width: data.target_width,
+                    target_height: data.target_height,
+                    threshold: data.threshold
+                });
+
                 if (data.image_url) {
                     imagePreviewEl.className = "preview-content";
                     imagePreviewEl.innerHTML = `
                         <div style="display:flex; flex-direction:column; gap:12px;">
                             <img
                                 src="${escapeHtml(data.image_url)}"
-                                alt="Processed image preview"
+                                alt="Uploaded image preview"
                                 style="max-width:100%; max-height:320px; object-fit:contain; border-radius:12px;"
                             />
-                            <div>Processed image</div>
+                            <div>${escapeHtml(data.filename || "Uploaded image")}</div>
                         </div>
                     `;
-                    imagePreviewStatusEl.textContent = "Image converted";
-                } else {
-                    imagePreviewStatusEl.textContent = "Image converted";
                 }
 
+                imagePreviewStatusEl.textContent = "Image converted";
                 setStatus("Image converted successfully.", "success");
             } catch (error) {
                 console.error(error);
@@ -406,7 +453,6 @@
             }
         }
 
-        /* ADDED: clear only image selection area */
         function clearImageSelection() {
             imageInputEl.value = "";
             imagePreviewEl.className = "preview-empty";
