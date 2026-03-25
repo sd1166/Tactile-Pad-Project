@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
-from braille import translate_text
-from fake_board import send_to_board, reset_board, clear_board
-from image_mapping.image_pipeline import process_image_for_flask
+from tools.braille import translate_text
+from tools.fake_board import send_to_board, reset_board, clear_board
 import os
 from werkzeug.utils import secure_filename
 import uuid
