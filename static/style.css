@@ -435,7 +435,7 @@ input:focus {
 
 .braille-line-preview {
     display: flex;
-    flex-wrap: wrap;              
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: 10px;
     padding: 10px 2px 6px;
