@@ -21,7 +21,7 @@ class braille_reader:
         return str(vars(self))
         
     #clear current text and reset cursor back to 0
-    def take_text_input(self,string):
+    def take_input(self,string):
         self.clear()
         self.real_text = string
         self.braille_text = translate_text(string)
