@@ -1,8 +1,7 @@
 from pico_LED_braille import braille_reader
 from machine import Pin
 from time import sleep_ms
-import network
-import socket
+
 
 LED_1 = Pin(21, Pin.OUT, value=0)
 LED_2 = Pin(20, Pin.OUT, value=0)
