@@ -14,8 +14,10 @@ Pattern bits 0..5 map to cell positions:
   (0,1)(1,1)  -> dots 2,5
   (0,2)(1,2)  -> dots 3,6
 """
+
 import os
-from braille import translate_text
+
+from tactile.braille import translate_text
 
 DEFAULT_WIDTH = 32
 DEFAULT_HEIGHT = 8

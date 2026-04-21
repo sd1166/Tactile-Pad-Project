@@ -1,8 +1,2 @@
-# Host tools for deploying to MicroPython on Raspberry Pi Pico
-mpremote>=1.28
-pyserial>=3.5
-
-# Flask (install if missing)
-flask>=3.0
-pillow>=10.0
-werkzeug>=3.0
+# Install dependencies from pyproject.toml (recommended)
+-e .

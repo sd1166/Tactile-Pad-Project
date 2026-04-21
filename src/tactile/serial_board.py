@@ -1,11 +1,12 @@
 """
-Send Braille patterns to the Pico over USB serial (see serial_receiver.py / main.py on device).
-Set USE_FAKE_BOARD=1 to print only (no hardware).
+Send Braille patterns to the Pico over USB serial (see serial_receiver.py /
+main.py on device). Set USE_FAKE_BOARD=1 to print only (no hardware).
 
 Environment:
-  PICO_SERIAL_PORT         default /dev/cu.usbmodem101 (use COMx on Windows)
-  PICO_SERIAL_STARTUP_SEC  seconds to wait after opening the port (boot + main.py), default 2.5
+  PICO_SERIAL_PORT  default /dev/cu.usbmodem101 (use COMx on Windows)
+  PICO_SERIAL_STARTUP_SEC  seconds after opening port (boot + main.py); default 2.5
 """
+
 import os
 import threading
 import time
@@ -29,7 +30,7 @@ def _get_serial():
     import serial
 
     try:
-        # dsrdtr/rtscts False avoids some boards resetting or stalling when the port opens
+        # dsrdtr/rtscts False avoids some boards resetting when the port opens
         ser = serial.Serial(
             _port(),
             115200,
@@ -40,9 +41,8 @@ def _get_serial():
         )
     except OSError as e:
         raise OSError(
-            "Cannot open %s. Close Thonny/mpremote, plug in the Pico, "
+            f"Cannot open {_port()}. Close Thonny/mpremote, plug in the Pico, "
             "and deploy serial_receiver.py as main.py, then reset the Pico."
-            % (_port(),)
         ) from e
 
     time.sleep(_startup_delay())

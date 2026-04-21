@@ -1,5 +1,5 @@
+
 from PIL import Image
-import os
 
 DEFAULT_TARGET_WIDTH = 6
 DEFAULT_TARGET_HEIGHT = 3
@@ -10,9 +10,13 @@ def load_image(image_path):
     img = Image.open(image_path).convert("L")
     return img
 
-def resize_image(img, target_width=DEFAULT_TARGET_WIDTH, target_height=DEFAULT_TARGET_HEIGHT):
+
+def resize_image(
+    img, target_width=DEFAULT_TARGET_WIDTH, target_height=DEFAULT_TARGET_HEIGHT
+):
     resized_img = img.resize((target_width, target_height))
     return resized_img
+
 
 def binarize_image(img, threshold=DEFAULT_THRESHOLD):
     width, height = img.size
@@ -31,6 +35,7 @@ def binarize_image(img, threshold=DEFAULT_THRESHOLD):
 
     return binary_img
 
+
 def binary_image_to_matrix(binary_img):
     width, height = binary_img.size
     pixels = binary_img.load()
@@ -47,6 +52,7 @@ def binary_image_to_matrix(binary_img):
 
     return matrix
 
+
 def flatten_matrix(matrix):
     flat = []
 
@@ -55,6 +61,7 @@ def flatten_matrix(matrix):
             flat.append(value)
 
     return flat
+
 
 def serialize_matrix_for_pico(matrix):
     parts = []
@@ -67,18 +74,33 @@ def serialize_matrix_for_pico(matrix):
 
     return ";".join(parts)
 
+
 def get_block_pixels(binary_img, start_x, start_y):
     width, height = binary_img.size
     pixels = binary_img.load()
 
     dot1 = pixels[start_x, start_y] if start_x < width and start_y < height else 0
-    dot4 = pixels[start_x + 1, start_y] if start_x + 1 < width and start_y < height else 0
+    dot4 = (
+        pixels[start_x + 1, start_y] if start_x + 1 < width and start_y < height else 0
+    )
 
-    dot2 = pixels[start_x, start_y + 1] if start_x < width and start_y + 1 < height else 0
-    dot5 = pixels[start_x + 1, start_y + 1] if start_x + 1 < width and start_y + 1 < height else 0
+    dot2 = (
+        pixels[start_x, start_y + 1] if start_x < width and start_y + 1 < height else 0
+    )
+    dot5 = (
+        pixels[start_x + 1, start_y + 1]
+        if start_x + 1 < width and start_y + 1 < height
+        else 0
+    )
 
-    dot3 = pixels[start_x, start_y + 2] if start_x < width and start_y + 2 < height else 0
-    dot6 = pixels[start_x + 1, start_y + 2] if start_x + 1 < width and start_y + 2 < height else 0
+    dot3 = (
+        pixels[start_x, start_y + 2] if start_x < width and start_y + 2 < height else 0
+    )
+    dot6 = (
+        pixels[start_x + 1, start_y + 2]
+        if start_x + 1 < width and start_y + 2 < height
+        else 0
+    )
 
     block = []
 
@@ -114,6 +136,7 @@ def get_block_pixels(binary_img, start_x, start_y):
 
     return block
 
+
 def block_to_value(block):
     value = 0
 
@@ -122,6 +145,7 @@ def block_to_value(block):
             value = value | (1 << i)
 
     return value
+
 
 def binary_image_to_braille_blocks(binary_img):
     width, height = binary_img.size
@@ -138,6 +162,7 @@ def binary_image_to_braille_blocks(binary_img):
 
     return rows
 
+
 def braille_blocks_to_values(block_rows):
     rows = []
 
@@ -152,6 +177,7 @@ def braille_blocks_to_values(block_rows):
 
     return rows
 
+
 def flatten_rows(rows):
     flat = []
 
@@ -160,6 +186,7 @@ def flatten_rows(rows):
             flat.append(value)
 
     return flat
+
 
 def serialize_for_pico(rows):
     parts = []
@@ -171,6 +198,7 @@ def serialize_for_pico(rows):
         parts.append(",".join(row_text))
 
     return ";".join(parts)
+
 
 def print_binary_image(binary_img):
     width, height = binary_img.size
@@ -185,19 +213,22 @@ def print_binary_image(binary_img):
                 line = line + "0 "
         print(line)
 
+
 def print_matrix(matrix):
     for row in matrix:
         print(row)
+
 
 def print_braille_rows(rows):
     for row in rows:
         print(row)
 
+
 def process_image(
     image_path,
     target_width=DEFAULT_TARGET_WIDTH,
     target_height=DEFAULT_TARGET_HEIGHT,
-    threshold=DEFAULT_THRESHOLD
+    threshold=DEFAULT_THRESHOLD,
 ):
     img = load_image(image_path)
     resized_img = resize_image(img, target_width, target_height)
@@ -224,20 +255,22 @@ def process_image(
         "braille_blocks": braille_blocks,
         "braille_encoded_values": braille_encoded_values,
         "braille_flat_values": braille_flat_values,
-        "braille_pico_data": braille_pico_data
+        "braille_pico_data": braille_pico_data,
     }
     return result
+
 
 def send_to_pico_placeholder(pico_data):
     print("Pico send placeholder:")
     print(pico_data)
+
 
 def process_image_for_flask(file_path, threshold=DEFAULT_THRESHOLD):
     result = process_image(
         image_path=file_path,
         target_width=DEFAULT_TARGET_WIDTH,
         target_height=DEFAULT_TARGET_HEIGHT,
-        threshold=threshold
+        threshold=threshold,
     )
 
     response = {
@@ -251,9 +284,10 @@ def process_image_for_flask(file_path, threshold=DEFAULT_THRESHOLD):
         "braille_blocks": result["braille_blocks"],
         "braille_encoded_values": result["braille_encoded_values"],
         "braille_flat_values": result["braille_flat_values"],
-        "braille_pico_data": result["braille_pico_data"]
+        "braille_pico_data": result["braille_pico_data"],
     }
     return response
+
 
 def main():
     image_path = "test_images/vertical_line_6x3.png"
@@ -262,11 +296,13 @@ def main():
         image_path=image_path,
         target_width=DEFAULT_TARGET_WIDTH,
         target_height=DEFAULT_TARGET_HEIGHT,
-        threshold=DEFAULT_THRESHOLD
+        threshold=DEFAULT_THRESHOLD,
     )
 
     print("Processed image:", result["image_path"])
-    print("Target size:", str(result["target_width"]) + "x" + str(result["target_height"]))
+    print(
+        "Target size:", str(result["target_width"]) + "x" + str(result["target_height"])
+    )
     print("Threshold:", result["threshold"])
     print()
 
@@ -299,6 +335,7 @@ def main():
     print()
 
     send_to_pico_placeholder(result["pico_data"])
+
 
 if __name__ == "__main__":
     main()

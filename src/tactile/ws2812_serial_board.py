@@ -1,14 +1,15 @@
 """
 Send a full WS2812 frame to the Pico over USB (base64-encoded RGB).
 
-Reuses the same USB serial connection and lock as serial_board.py so you do not
+Reuses the same USB serial connection and lock as tactile.serial_board so you do not
 open the port twice. Import serial_board before this module (or call any
 serial_board function once first) so the port is configured.
 """
+
 import base64
 import os
 
-from serial_board import _get_serial, _lock
+from tactile.serial_board import _get_serial, _lock
 
 
 def send_ws2812_frame(rgb_bytes):
