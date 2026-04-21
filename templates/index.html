@@ -363,6 +363,15 @@
             gapCapReferenceCols: 20
         };
 
+        // BRAILLE_MAP uses dot order 1..6 (left column then right). CSS grid fills row-by-row.
+        const BRAILLE_DOT_ORDER_TO_GRID = [0, 3, 1, 4, 2, 5];
+        const BRAILLE_GRID_DOT_NUMBERS = [1, 4, 2, 5, 3, 6];
+
+        function patternBitsForGrid(pattern) {
+            const s = String(pattern || "000000").padEnd(6, "0").slice(0, 6);
+            return BRAILLE_DOT_ORDER_TO_GRID.map((i) => s[i]);
+        }
+
         const simulationState = {
             rows: TEXT_MODE_DEFAULTS.rows,
             cols: TEXT_MODE_DEFAULTS.cols,
@@ -445,14 +454,14 @@
 
         function renderBrailleCell(pattern, extraClass = "") {
             const safePattern = String(pattern || "000000").padEnd(6, "0").slice(0, 6);
-            const dots = safePattern.split("");
+            const bits = patternBitsForGrid(safePattern);
 
             return `
                 <div class="braille-cell ${extraClass}" aria-label="Braille pattern ${safePattern}">
-                    ${dots.map((bit, index) => `
+                    ${bits.map((bit, index) => `
                         <span
                             class="dot ${bit === "1" ? "raised" : ""}"
-                            data-dot="${index + 1}"
+                            data-dot="${BRAILLE_GRID_DOT_NUMBERS[index]}"
                             aria-hidden="true"
                         ></span>
                     `).join("")}
@@ -765,7 +774,7 @@
 
         function createBrailleCharCell(pattern) {
             const safePattern = String(pattern || "000000").padEnd(6, "0").slice(0, 6);
-            const dots = safePattern.split("");
+            const dots = patternBitsForGrid(safePattern);
 
             const charCell = document.createElement("div");
             charCell.className = "simulation-char-cell";

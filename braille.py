@@ -75,6 +75,12 @@ DIGIT_TO_BRAILLE = {
 CAPITAL_SIGN = '000001'   # dot 6
 NUMBER_SIGN = '001111'    # dots 3-4-5-6
 
+# Pattern index 0..5 = dots 1..6 (left column top to bottom, then right):
+#   1 4
+#   2 5
+#   3 6
+# The web UI maps this to row-major for on-screen layout. The Pico uses the same
+# dot order as BRAILLE_MAP: wire LED pin_list[0]..[5] to dots 1..6 in that order.
 
 def is_letter(ch: str) -> bool:
     return ch.isalpha() and ch.lower() in BRAILLE_MAP

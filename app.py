@@ -1,10 +1,18 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
 from braille import translate_text
-from fake_board import send_to_board, reset_board, clear_board
-from image_pipeline import process_image_for_flask
 import os
+
+if os.environ.get("USE_FAKE_BOARD", "").lower() in ("1", "true", "yes"):
+    from fake_board import send_to_board, reset_board, clear_board
+else:
+    from serial_board import send_to_board, reset_board, clear_board
+
+from image_pipeline import process_image_for_flask
 from werkzeug.utils import secure_filename
 import uuid
+
+from ws2812_matrix import render_braille_rgb_buffer, buffer_to_preview_grid
+from ws2812_serial_board import send_ws2812_frame, clear_ws2812_panel
 
 app = Flask(__name__)
 
@@ -106,5 +114,44 @@ def clear():
     return jsonify({"status": "cleared"})
 
 
+@app.route("/display_panel", methods=["POST"])
+def display_panel():
+    """
+    Render Braille text on an 8x32 WS2812 grid (32 wide x 8 tall by default).
+    JSON body: text (required), optional fg [r,g,b], bg [r,g,b], serpentine bool.
+    """
+    data = request.get_json() or {}
+    text = data.get("text", "")
+    fg = tuple(data.get("fg", [255, 255, 255]))
+    bg = tuple(data.get("bg", [0, 0, 0]))
+    serpentine = bool(data.get("serpentine", False))
+    rgb, meta = render_braille_rgb_buffer(
+        text, fg=fg, bg=bg, serpentine_rows=serpentine
+    )
+    if os.environ.get("USE_FAKE_BOARD", "").lower() not in ("1", "true", "yes"):
+        try:
+            send_ws2812_frame(rgb)
+        except OSError as e:
+            return jsonify({"status": "error", "message": str(e), "meta": meta}), 500
+    preview = buffer_to_preview_grid(rgb, meta["width"], meta["height"])
+    return jsonify({
+        "status": "ok",
+        "text": text,
+        "meta": meta,
+        "preview": preview
+    })
+
+
+@app.route("/clear_panel", methods=["POST"])
+def clear_panel():
+    if os.environ.get("USE_FAKE_BOARD", "").lower() not in ("1", "true", "yes"):
+        try:
+            clear_ws2812_panel()
+        except OSError as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "cleared"})
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    # use_reloader=False avoids two processes fighting over the USB serial port
+    app.run(debug=True, use_reloader=False)

@@ -1,7 +1,8 @@
 import serial
 import time
 
-pico = serial.Serial('/dev/tty.usbmodem101', 115200)
+# On macOS use /dev/cu.* for your Pico (e.g. /dev/cu.usbmodem101)
+pico = serial.Serial("/dev/cu.usbmodem101", 115200)
 
 time.sleep(2)
 
