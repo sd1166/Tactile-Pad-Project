@@ -8,6 +8,7 @@ serial_board function once first) so the port is configured.
 
 import base64
 import os
+import time
 
 from tactile.serial_board import _get_serial, _lock
 
@@ -22,6 +23,8 @@ def send_ws2812_frame(rgb_bytes):
         line = "WS2812\n" + b64 + "\n"
         ser.write(line.encode("ascii"))
         ser.flush()
+        # Let the Pico finish decoding and driving the strip before the next command.
+        time.sleep(float(os.environ.get("WS2812_POST_WRITE_DELAY_SEC", "0.06")))
         if os.environ.get("SERIAL_DEBUG", "").lower() in ("1", "true", "yes"):
             print("serial -> Pico: WS2812 frame", len(rgb_bytes) // 3, "LEDs")
 

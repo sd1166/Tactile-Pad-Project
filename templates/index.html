@@ -1113,12 +1113,20 @@
                 body: JSON.stringify({ text })
             });
 
-            if (!response.ok) {
-                throw new Error(`Display request failed with status ${response.status}`);
-            }
+            const data = await response.json().catch(() => ({}));
 
-            const data = await response.json();
-            return Array.isArray(data.patterns) ? data.patterns : [];
+            if (!response.ok) {
+                const msg =
+                    (data && data.message) ||
+                    `Display request failed (HTTP ${response.status})`;
+                throw new Error(msg);
+            }
+            if (data.status === "error" && data.message) {
+                throw new Error(data.message);
+            }
+            return {
+                patterns: Array.isArray(data.patterns) ? data.patterns : [],
+            };
         }
 
         async function uploadImageForSimulation(file) {
@@ -1222,7 +1230,7 @@
             try {
                 setStatus("Rendering text on the large simulation board...", "loading");
 
-                const patterns = await fetchBraillePatterns(text);
+                const { patterns } = await fetchBraillePatterns(text);
                 simulationState.textPatterns = patterns;
                 simulationState.textOffset = 0;
                 simulationDisplayMetaEl.textContent = "Text Rendered";
@@ -1284,13 +1292,16 @@
             try {
                 setStatus("Sending text to board...", "loading");
 
-                const patterns = await fetchBraillePatterns(text);
+                const { patterns } = await fetchBraillePatterns(text);
 
                 renderPreview(patterns);
                 setStatus("Text displayed successfully.", "success");
             } catch (error) {
                 console.error(error);
-                setStatus("Failed to display text on the board.", "error");
+                setStatus(
+                    (error && error.message) || "Failed to display text on the board.",
+                    "error"
+                );
             }
         }
 

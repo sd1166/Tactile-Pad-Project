@@ -12,17 +12,13 @@ from werkzeug.utils import secure_filename
 from tactile.braille import translate_text
 from tactile.image_pipeline import process_image_for_flask
 from tactile.ws2812_matrix import buffer_to_preview_grid, render_braille_rgb_buffer
+from tactile.serial_board import clear_board, reset_board
 from tactile.ws2812_serial_board import clear_ws2812_panel, send_ws2812_frame
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Same as legacy flat layout: uploads live under the process cwd, not the package path.
 UPLOAD_FOLDER = "uploads"
-
-if os.environ.get("USE_FAKE_BOARD", "").lower() in ("1", "true", "yes"):
-    from tactile.fake_board import clear_board, reset_board, send_to_board
-else:
-    from tactile.serial_board import clear_board, reset_board, send_to_board
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
 
@@ -40,6 +36,16 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def _preview_mapping(meta: dict) -> dict:
+    return {
+        "serpentine_rows": meta["serpentine_rows"],
+        "flip_x": meta["flip_x"],
+        "flip_y": meta["flip_y"],
+        "column_major": meta["column_major"],
+        "swap_axes": meta["swap_axes"],
+    }
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -47,13 +53,45 @@ def home():
 
 @app.route("/display", methods=["POST"])
 def display():
-    data = request.get_json()
+    """
+    Main "Display" action: Braille preview JSON plus WS2812 panel output (8x32).
+
+    Optional JSON: fg [r,g,b], bg [r,g,b]. Strip serpentine: env WS2812_SERPENTINE
+    (default on for 32×8 zig-zag panels).
+    """
+    data = request.get_json() or {}
     text = data.get("text", "")
-
     patterns = translate_text(text)
-    send_to_board(patterns)
-
-    return jsonify({"status": "ok", "text": text, "patterns": patterns})
+    fg = tuple(data.get("fg", [255, 255, 255]))
+    bg = tuple(data.get("bg", [0, 0, 0]))
+    rgb, meta = render_braille_rgb_buffer(text, fg=fg, bg=bg)
+    preview = buffer_to_preview_grid(
+        rgb, meta["width"], meta["height"], _preview_mapping(meta)
+    )
+    try:
+        send_ws2812_frame(rgb)
+    except Exception as e:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": str(e),
+                    "patterns": patterns,
+                    "meta": meta,
+                    "preview": preview,
+                }
+            ),
+            500,
+        )
+    return jsonify(
+        {
+            "status": "ok",
+            "text": text,
+            "patterns": patterns,
+            "meta": meta,
+            "preview": preview,
+        }
+    )
 
 
 @app.route("/uploads/<filename>")
@@ -119,32 +157,30 @@ def clear():
 def display_panel():
     """
     Render Braille text on an 8x32 WS2812 grid (32 wide x 8 tall by default).
-    JSON body: text (required), optional fg [r,g,b], bg [r,g,b], serpentine bool.
+    JSON body: text (required), optional fg [r,g,b], bg [r,g,b].
+    Serpentine strip order: env WS2812_SERPENTINE (default on).
     """
     data = request.get_json() or {}
     text = data.get("text", "")
     fg = tuple(data.get("fg", [255, 255, 255]))
     bg = tuple(data.get("bg", [0, 0, 0]))
-    serpentine = bool(data.get("serpentine", False))
-    rgb, meta = render_braille_rgb_buffer(
-        text, fg=fg, bg=bg, serpentine_rows=serpentine
+    rgb, meta = render_braille_rgb_buffer(text, fg=fg, bg=bg)
+    try:
+        send_ws2812_frame(rgb)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e), "meta": meta}), 500
+    preview = buffer_to_preview_grid(
+        rgb, meta["width"], meta["height"], _preview_mapping(meta)
     )
-    if os.environ.get("USE_FAKE_BOARD", "").lower() not in ("1", "true", "yes"):
-        try:
-            send_ws2812_frame(rgb)
-        except OSError as e:
-            return jsonify({"status": "error", "message": str(e), "meta": meta}), 500
-    preview = buffer_to_preview_grid(rgb, meta["width"], meta["height"])
     return jsonify({"status": "ok", "text": text, "meta": meta, "preview": preview})
 
 
 @app.route("/clear_panel", methods=["POST"])
 def clear_panel():
-    if os.environ.get("USE_FAKE_BOARD", "").lower() not in ("1", "true", "yes"):
-        try:
-            clear_ws2812_panel()
-        except OSError as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+    try:
+        clear_ws2812_panel()
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
     return jsonify({"status": "cleared"})
 
 

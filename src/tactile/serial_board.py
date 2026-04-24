@@ -1,6 +1,6 @@
 """
-Send Braille patterns to the Pico over USB serial (see serial_receiver.py /
-main.py on device). Set USE_FAKE_BOARD=1 to print only (no hardware).
+Send commands to the Pico over USB serial (see pico/ firmware). WS2812 frames
+use tactile.ws2812_serial_board; clear/reset use CLEAR and six-bit lines here.
 
 Environment:
   PICO_SERIAL_PORT  default /dev/cu.usbmodem101 (use COMx on Windows)
@@ -20,7 +20,7 @@ def _port():
 
 
 def _startup_delay():
-    return float(os.environ.get("PICO_SERIAL_STARTUP_SEC", "2.5"))
+    return float(os.environ.get("PICO_SERIAL_STARTUP_SEC", "3.0"))
 
 
 def _get_serial():
@@ -42,7 +42,9 @@ def _get_serial():
     except OSError as e:
         raise OSError(
             f"Cannot open {_port()}. Close Thonny/mpremote, plug in the Pico, "
-            "and deploy serial_receiver.py as main.py, then reset the Pico."
+            "set PICO_SERIAL_PORT to your USB device, then reset. "
+            "For WS2812, deploy pico/pico_ws2812_receiver.py as main.py; "
+            "for six-GPIO Braille, use pico/serial_receiver.py as main.py."
         ) from e
 
     time.sleep(_startup_delay())

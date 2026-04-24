@@ -17,3 +17,4 @@ __all__ = ["app"]
 if __name__ == "__main__":
     # use_reloader=False avoids two processes fighting over the USB serial port
     app.run(debug=True, use_reloader=False)
+
