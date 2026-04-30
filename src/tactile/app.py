@@ -21,6 +21,9 @@ WS2812_TEXT_ROWS = 2
 # LED + detailed preview: one page = this many typed characters from the input string (11×2).
 WS2812_CHARS_PER_PAGE = 22
 
+IMAGE_LED_WIDTH = 16
+IMAGE_LED_HEIGHT = 16
+
 # Same as legacy flat layout: uploads live under the process cwd, not the package path.
 UPLOAD_FOLDER = "uploads"
 
@@ -38,6 +41,38 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    
+
+def image_rows_to_ws2812_rgb(rows, fg=(255, 255, 255), bg=(0, 0, 0), width=IMAGE_LED_WIDTH, height=IMAGE_LED_HEIGHT):
+    """
+    Convert image 0/1 rows into WS2812 RGB bytes.
+
+    1 means active LED.
+    0 means inactive LED.
+    The output format matches send_ws2812_frame().
+    """
+    buf = bytearray(width * height * 3)
+
+    for y in range(height):
+  
+            value = 0
+
+            if y < len(rows):
+                value = rows[y]
+
+            if value == 1:
+                color = fg
+            else:
+                color = bg
+
+            index = y * width
+            offset = index * 3
+
+            buf[offset] = color[0]
+            buf[offset + 1] = color[1]
+            buf[offset + 2] = color[2]
+
+    return bytes(buf)
 
 
 def _preview_mapping(meta: dict) -> dict:
@@ -189,6 +224,10 @@ def upload_image():
 
     try:
         result = process_image_for_flask(save_path)
+
+        rows = result.get("rows", [])
+        rgb = image_rows_to_ws2812_rgb(rows, fg=(30, 0, 0))
+        send_ws2812_frame(rgb)
 
         image_url = url_for("uploaded_file", filename=unique_filename)
 
