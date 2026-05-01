@@ -34,11 +34,11 @@ PIN_DATA = 12
 # timing=1 is usual for WS2812 / NeoPixel. If colors are wrong or nothing lights, try timing=0.
 NEO_TIMING = 1
 TEXT_WIDTH = 32
-TEXT_HEIGHT = 8
+TEXT_HEIGHT = 4
 TEXT_LEDS = TEXT_WIDTH * TEXT_HEIGHT
 
-IMG_WIDTH = 16
-IMG_HEIGHT = 16
+IMG_WIDTH = 8
+IMG_HEIGHT = 8
 IMG_LEDS = IMG_WIDTH * IMG_HEIGHT
 
 NUM_LEDS = TEXT_LEDS + IMG_LEDS
@@ -94,14 +94,14 @@ def apply_rgb_buffer(raw, offset=0):
     n = min(NUM_LEDS, len(raw) // 3)
     for i in range(n):
         o = i * 3
-        r, g, b = raw[o], raw[o + 1], raw[o + 2]
+        r = raw[o]
         if FLIP_HORIZONTAL:
             y = i // TEXT_WIDTH
             x = i % TEXT_WIDTH
             dst_i = y * TEXT_WIDTH + (TEXT_WIDTH - 1 - x + offset)
         else:
             dst_i = i + offset
-        np[dst_i] = (r, g, b)
+        np[dst_i] = (r, 0, 0)
     for i in range(n, TEXT_LEDS):
         np[i + offset] = (0, 0, 0)
     np.write()

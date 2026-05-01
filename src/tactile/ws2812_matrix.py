@@ -220,7 +220,7 @@ def render_braille_rgb_buffer(
     margin_x = _parse_margin("WS2812_MARGIN_X", 0)
     margin_y = _parse_margin("WS2812_MARGIN_Y", 0)
     bright = _brightness()
-    lit_fg = tuple(min(255, max(0, int(round(c * bright)))) for c in fg)
+    lit_fg = (255 * bright, 0, 0) 
     panel_map = panel_mapping_from_env()
 
     n = width * height
@@ -236,9 +236,10 @@ def render_braille_rgb_buffer(
         if idx is None:
             return False
         o = idx * 3
-        buf[o] = color[0]
-        buf[o + 1] = color[1]
-        buf[o + 2] = color[2]
+        buf[o] = int(color[0])
+        buf[o + 1] = 0
+        buf[o + 2] = 0
+        
         return True
 
     def blit_cell(x0, y0, pattern):

@@ -85,15 +85,15 @@ def _ws2812_character_page(text: str, page: int, chunk: int = WS2812_CHARS_PER_P
 
 
 def _image_matrix_to_ws2812_rgb(
-    rows: list[list[int]],
+    flat_list: list[int],
     width: int,
     height: int,
-    fg: tuple[int, int, int] = (255, 255, 255),
+    fg: tuple[int, int, int] = (255, 0, 0),
     bg: tuple[int, int, int] = (0, 0, 0),
 ) -> bytes:
     """
     Convert a logical 0/1 image matrix into a WS2812 RGB frame using
-    the same strip mapping options used by text rendering.
+    flat_value list from process_image_for_flask
     """
     total_leds = width * height
     frame = bytearray(total_leds * 3)
@@ -103,12 +103,10 @@ def _image_matrix_to_ws2812_rgb(
     except (TypeError, ValueError):
         brightness = 0.10
     brightness = max(0.0, min(1.0, brightness))
-    lit_fg = tuple(min(255, max(0, int(round(c * brightness)))) for c in fg)
+    lit_fg = tuple(min(255, max(0,int(round(c * brightness)))) for c in fg)
 
-    for py in range(height):
-        source_row = rows[py] if py < len(rows) and isinstance(rows[py], list) else []
-        for px in range(width):
-            value = 1 if (px < len(source_row) and source_row[px] == 1) else 0
+    for py in range(total_leds):
+            value = flat_list[py]
             color = lit_fg if value else bg
             idx = panel_strip_index(px, py, width, height, mapping)
             if idx is None:
@@ -157,7 +155,7 @@ def display():
         patterns = translate_text(text)
         patterns_rows = None
         page_lines = page_data["page_lines"]
-    fg = tuple(data.get("fg", [255, 255, 255]))
+    fg = tuple(data.get("fg", [255, 0, 0]))
     bg = tuple(data.get("bg", [0, 0, 0]))
     rgb, meta = render_braille_rgb_buffer(page_text, fg=fg, bg=bg)
     preview = buffer_to_preview_grid(
@@ -322,7 +320,7 @@ def display_panel():
     """
     data = request.get_json() or {}
     text = data.get("text", "")
-    fg = tuple(data.get("fg", [255, 255, 255]))
+    fg = tuple(data.get("fg", [255, 0, 0]))
     bg = tuple(data.get("bg", [0, 0, 0]))
     rgb, meta = render_braille_rgb_buffer(text, fg=fg, bg=bg)
     try:
