@@ -1,0 +1,8 @@
+flask>=3.0
+pillow>=10.0
+werkzeug>=3.0
+pyserial>=3.5
+mpremote>=1.28
+
+[dev]
+ruff>=0.4

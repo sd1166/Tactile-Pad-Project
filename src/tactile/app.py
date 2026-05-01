@@ -108,10 +108,7 @@ def _image_matrix_to_ws2812_rgb(
     for py in range(total_leds):
             value = flat_list[py]
             color = lit_fg if value else bg
-            idx = panel_strip_index(px, py, width, height, mapping)
-            if idx is None:
-                continue
-            offset = idx * 3
+            offset = value * 3
             frame[offset] = color[0]
             frame[offset + 1] = color[1]
             frame[offset + 2] = color[2]
@@ -254,7 +251,7 @@ def _handle_image_upload(send_to_led: bool):
                     400,
                 )
             rgb_frame = _image_matrix_to_ws2812_rgb(
-                result.get("rows", []),
+                result.get("flat_values", []),
                 panel_width,
                 panel_height,
             )

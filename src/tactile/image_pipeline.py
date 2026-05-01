@@ -274,8 +274,8 @@ def send_to_pico_placeholder(pico_data):
 def process_image_for_flask(file_path, threshold=DEFAULT_THRESHOLD):
     result = process_image(
         image_path=file_path,
-        target_width=None,
-        target_height=None,
+        target_width=DEFAULT_TARGET_HEIGHT,
+        target_height=DEFAULT_TARGET_WIDTH,
         threshold=threshold,
     )
 
