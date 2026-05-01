@@ -187,7 +187,7 @@ def render_braille_rgb_buffer(
     text,
     width=None,
     height=None,
-    fg=(255, 255, 255),
+    fg=(255, 0, 0),
     bg=(0, 0, 0),
     col_gap=None,
     row_gap=None,
